@@ -1,42 +1,39 @@
 use embedded_hal::blocking::i2c::{WriteRead, Write};
+use embedded_hal::blocking::delay::DelayMs;
 use crate::address::Address;
 use crate::error::Error;
 use crate::registers::Register;
 use crate::accel::{Accel, AccelFullScale};
 use crate::gyro::{Gyro, GyroFullScale};
 use crate::fifo::Fifo;
-use drogue_embedded_timer::Delay;
-use embedded_time::duration::Milliseconds;
 use crate::clock_source::ClockSource;
 use crate::config::DigitalLowPassFilter;
-use core::marker::PhantomData;
 
 /// InvenSense MPU-6050 Driver
-pub struct Mpu6050<'clock, I2c, Clock>
+pub struct Mpu6050<I2c, Delay>
     where I2c: Write + WriteRead,
           <I2c as WriteRead>::Error: core::fmt::Debug,
           <I2c as Write>::Error: core::fmt::Debug,
-          Clock: embedded_time::Clock,
-
+          Delay: DelayMs<u16>
 {
     i2c: I2c,
     address: u8,
-    clock: &'clock Clock,
+    delay: Delay
 }
 
-impl<'clock, I2c, Clock> Mpu6050<'clock, I2c, Clock>
+impl<I2c, Delay> Mpu6050<I2c, Delay>
     where I2c: Write + WriteRead,
           <I2c as WriteRead>::Error: core::fmt::Debug,
           <I2c as Write>::Error: core::fmt::Debug,
-          Clock: embedded_time::Clock,
+          Delay: DelayMs<u16>
 {
 
     /// Construct a new i2c driver for the MPU-6050
-    pub fn new(i2c: I2c, address: Address, clock: &'clock Clock) -> Result<Self, Error<I2c>> {
+    pub fn new(i2c: I2c, address: Address, delay: Delay) -> Result<Self, Error<I2c>> {
         let mut sensor = Self {
             i2c,
             address: address.into(),
-            clock,
+            delay,
         };
 
         sensor.disable_sleep()?;
@@ -108,7 +105,7 @@ impl<'clock, I2c, Clock> Mpu6050<'clock, I2c, Clock>
         let mut value = self.read_register(Register::PwrMgmt1)?;
         value |= (1 << 7);
         self.write_register(Register::PwrMgmt1, value)?;
-        Delay::new(self.clock).delay(Milliseconds(200));
+        self.delay.delay_ms(200);
         Ok(())
     }
 
@@ -117,7 +114,7 @@ impl<'clock, I2c, Clock> Mpu6050<'clock, I2c, Clock>
         let mut value = self.read_register(Register::UserCtrl)?;
         value |= (1 << 0);
         self.write_register(Register::UserCtrl, value)?;
-        Delay::new(self.clock).delay(Milliseconds(200));
+        self.delay.delay_ms(200);
         Ok(())
     }
 

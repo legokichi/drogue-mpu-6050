@@ -1,5 +1,6 @@
 use crate::sensor::Mpu6050;
 use embedded_hal::blocking::i2c::{Write, WriteRead};
+use embedded_hal::blocking::delay::DelayMs;
 use crate::error::Error;
 use crate::registers::Register;
 use crate::dmp_firmware::FIRMWARE;
@@ -7,13 +8,14 @@ use crate::dmp_firmware::FIRMWARE;
 const BANK_SIZE: usize = 256;
 const CHUNK_SIZE: usize = 16;
 
-impl<'clock, I2c, Clock> Mpu6050<'clock, I2c, Clock>
+impl<I2c, Delay> Mpu6050<I2c, Delay>
     where I2c: Write + WriteRead,
           <I2c as WriteRead>::Error: core::fmt::Debug,
           <I2c as Write>::Error: core::fmt::Debug,
-          Clock: embedded_time::Clock {
+          Delay: DelayMs<u16>
+{
     pub fn load_firmware(&mut self) -> Result<(), Error<I2c>> {
-        log::info!( "loading firmware");
+        // log::info!( "loading firmware");
         self.write_memory(&FIRMWARE)
         //self.boot_firmware()
     }
@@ -42,17 +44,17 @@ impl<'clock, I2c, Clock> Mpu6050<'clock, I2c, Clock>
             self.write( &prolog_and_chunk )?;
         }
 
-        log::info!("write {}", data.len());
+        // log::info!("write {}", data.len());
         Ok(())
     }
 
     fn set_bank(&mut self, bank: u8) -> Result<(), Error<I2c>> {
-        log::info!("set bank={}", bank);
+        // log::info!("set bank={}", bank);
         self.write_register(Register::BankSel, bank)
     }
 
     fn set_memory_start_address(&mut self, addr: u8) -> Result<(), Error<I2c>> {
-        log::info!("set mem={}", addr);
+        // log::info!("set mem={}", addr);
         self.write_register(Register::MemStartAddr, addr)
     }
 
